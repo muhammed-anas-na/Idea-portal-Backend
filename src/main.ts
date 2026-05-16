@@ -22,6 +22,23 @@ async function bootstrap() {
   });
   app.setGlobalPrefix('api');
 
+    const httpAdapter = app.getHttpAdapter();
+  httpAdapter.get('/health', (req, res) => {
+    res.status(200).json({ status: 'Njan Adipoli aayittu oodandu', timestamp: new Date().toISOString() });
+  });
+    httpAdapter.get('/', (req, res) => {
+    res.status(200).send(`
+      <html>
+        <body style="font-family:sans-serif;text-align:center;padding:60px;">
+          <h1>Feebak IDEA Portal API</h1>
+          <p>Server is up and running...</p>
+          <p><a href="/health">Check my health </a></p>
+          <p style="color:#888;font-size:12px;">v1.0.0 · ${new Date().toISOString()}</p>
+        </body>
+      </html>
+    `);
+  });
+
   const port = Number(config.get<string>('PORT', '3000'));
   await app.listen(port);
   // eslint-disable-next-line no-console
