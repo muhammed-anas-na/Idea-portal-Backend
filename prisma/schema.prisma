@@ -1,0 +1,197 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("admins")
+}
+
+model FeebakProduct {
+  id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @unique
+  name        String
+  description String?
+  url         String
+  logoUrl     String?  @map("logo_url")
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  answers  InteractionAnswer[]
+  useCases UseCase[]
+
+  @@map("feebak_products")
+}
+
+model UseCase {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String
+  summary     String?
+  contentHtml String   @map("content_html")
+  productId   String?  @map("product_id") @db.Uuid
+  sortOrder   Int      @default(0) @map("sort_order")
+  isPublished Boolean  @default(false) @map("is_published")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  product FeebakProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([isPublished])
+  @@map("use_cases")
+}
+
+enum InteractionKind {
+  post
+  comment
+  reply
+  vote
+
+  @@map("interaction_kind")
+}
+
+enum CustomerStatus {
+  draft
+  ready
+  published
+
+  @@map("customer_status")
+}
+
+model Customer {
+  id        String         @id @default(uuid()) @db.Uuid
+  name      String
+  email     String?        @unique
+  status    CustomerStatus @default(draft)
+  notes     String?
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  interactions     Interaction[]
+  page             CustomerPage?
+  trackingLinks    TrackingLink[]
+  trackingSessions TrackingSession[]
+
+  @@index([status])
+  @@map("customers")
+}
+
+model Interaction {
+  id         String          @id @default(uuid()) @db.Uuid
+  customerId String          @map("customer_id") @db.Uuid
+  sourceUrl  String          @map("source_url")
+  sourceId   String?         @map("source_id")
+  kind       InteractionKind
+  occurredOn DateTime?       @map("occurred_on") @db.Date
+  title      String
+  body       String?
+  raw        Json?
+  sortOrder  Int             @default(0) @map("sort_order")
+  createdAt  DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime        @updatedAt @map("updated_at") @db.Timestamptz
+
+  customer      Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  answer        InteractionAnswer?
+  trackingLinks TrackingLink[]
+
+  @@unique([customerId, sourceUrl])
+  @@index([customerId])
+  @@map("interactions")
+}
+
+model InteractionAnswer {
+  id            String   @id @default(uuid()) @db.Uuid
+  interactionId String   @unique @map("interaction_id") @db.Uuid
+  contentHtml   String   @map("content_html")
+  productId     String?  @map("product_id") @db.Uuid
+  isPublished   Boolean  @default(false) @map("is_published")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  interaction Interaction    @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  product     FeebakProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@map("interaction_answers")
+}
+
+model CustomerPage {
+  id          String   @id @default(uuid()) @db.Uuid
+  customerId  String   @unique @map("customer_id") @db.Uuid
+  introHtml   String   @default("") @map("intro_html")
+  outroHtml   String   @default("") @map("outro_html")
+  accentColor String?  @map("accent_color")
+  calendlyUrl String?  @map("calendly_url")
+  isPublished Boolean  @default(false) @map("is_published")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("customer_pages")
+}
+
+model TrackingLink {
+  id            String   @id @default(uuid()) @db.Uuid
+  token         String   @unique
+  customerId    String?  @map("customer_id") @db.Uuid
+  interactionId String?  @map("interaction_id") @db.Uuid
+  label         String?  @db.VarChar(200)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  customer    Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  interaction Interaction? @relation(fields: [interactionId], references: [id], onDelete: SetNull)
+  sessions    TrackingSession[]
+  events      TrackingEvent[]
+
+  @@index([customerId])
+  @@map("tracking_links")
+}
+
+model TrackingSession {
+  id             String   @id @db.Uuid
+  trackingLinkId String?  @map("tracking_link_id") @db.Uuid
+  customerId     String?  @map("customer_id") @db.Uuid
+  anonId         String?  @map("anon_id")
+  userAgent      String?  @map("user_agent")
+  ipHash         String?  @map("ip_hash")
+  startedAt      DateTime @default(now()) @map("started_at") @db.Timestamptz
+  lastSeenAt     DateTime @default(now()) @map("last_seen_at") @db.Timestamptz
+
+  trackingLink TrackingLink?   @relation(fields: [trackingLinkId], references: [id], onDelete: SetNull)
+  customer     Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  events       TrackingEvent[]
+
+  @@index([trackingLinkId])
+  @@index([customerId])
+  @@map("tracking_sessions")
+}
+
+model TrackingEvent {
+  id             String   @id @default(uuid()) @db.Uuid
+  sessionId      String   @map("session_id") @db.Uuid
+  trackingLinkId String?  @map("tracking_link_id") @db.Uuid
+  customerId     String?  @map("customer_id") @db.Uuid
+  interactionId  String?  @map("interaction_id") @db.Uuid
+  eventType      String   @map("event_type")
+  payload        Json     @default("{}")
+  occurredAt     DateTime @default(now()) @map("occurred_at") @db.Timestamptz
+
+  session      TrackingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  trackingLink TrackingLink?   @relation(fields: [trackingLinkId], references: [id], onDelete: SetNull)
+
+  @@index([trackingLinkId, occurredAt])
+  @@index([customerId, occurredAt])
+  @@index([eventType, occurredAt])
+  @@map("tracking_events")
+}
