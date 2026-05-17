@@ -17,7 +17,7 @@ async function bootstrap() {
   const adminOrigin = config.get<string>('ADMIN_ORIGIN', 'https://idea-portal-admin.onrender.com/');
   const portalOrigin = config.get<string>('PORTAL_ORIGIN', 'https://idea-portal-frontend-d55q.onrender.com/');
   app.enableCors({
-    origin: [adminOrigin, portalOrigin],
+    origin: [adminOrigin, portalOrigin, "http://localhost:4200", "http://localhost:4201"],
     credentials: true,
   });
   app.setGlobalPrefix('api');
