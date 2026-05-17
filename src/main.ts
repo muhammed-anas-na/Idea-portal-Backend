@@ -14,8 +14,8 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }),
   );
-  const adminOrigin = config.get<string>('ADMIN_ORIGIN', 'https://idea-portal-admin.onrender.com/');
-  const portalOrigin = config.get<string>('PORTAL_ORIGIN', 'https://idea-portal-frontend-d55q.onrender.com/');
+  const adminOrigin = config.get<string>('ADMIN_ORIGIN', 'https://idea-portal-admin.onrender.com');
+  const portalOrigin = config.get<string>('PORTAL_ORIGIN', 'https://idea-portal-frontend-d55q.onrender.com');
   app.enableCors({
     origin: [adminOrigin, portalOrigin, "http://localhost:4200", "http://localhost:4201"],
     credentials: true,
